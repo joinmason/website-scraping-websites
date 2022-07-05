@@ -7,7 +7,7 @@ const instagramCall = await Apify.call('instagram-scraper', {
     "https://www.instagram.com/profile"
   ],
     "resultsType": "details",
-    "resultsLimit":1;
+    "resultsLimit":1,
 });
  
 const { datasetId } = instagramCall;
