@@ -1,6 +1,6 @@
 import Apify from 'apify';
  
-const { profiles, domains } = await Apify.getInput();
+const { name, profiles, domains } = await Apify.getInput();
  
 const instagramCall = await Apify.call('instagram-scraper', { 
    directUrls: [

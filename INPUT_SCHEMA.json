@@ -4,13 +4,27 @@
     "type": "object",
     "schemaVersion": 1,
     "properties": {
-        "usernames": {
-            "title": "Instagram username(s)",
+        "name": {
+            "title": "name",
             "type": "array",
             "description": "Provide a profile URL of the account you want to scrape the posts from.",
             "editor": "stringList",
             "prefill": ["apifytech"]
+        },
+        "profile": {
+            "title": "Instagram username(s)",
+            "type": "array",
+            "description": "Provide a profile URL of the account you want to scrape the posts from.",
+            "editor": "stringList",
+            "prefill": ["cherryus"]
+        },
+        "domain": {
+            "title": "domain",
+            "type": "array",
+            "description": "Provide a profile URL of the account you want to scrape the posts from.",
+            "editor": "stringList",
+            "prefill": ["https://cherrydemo.com"]
         }
     },
-    "required": ["usernames"]
+    "required": ["name", "profile", "domain"]
 }
