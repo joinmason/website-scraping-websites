@@ -18,6 +18,7 @@ const isValidLinkTree = urlString=>{
 //const { name, profiles, domains } = await Apify.getInput();
 
 const input = await Apify.getInput();
+console.log(input);
 const name = input.name;
 const profiles = input.profiles;
 const domains = input.domains;
