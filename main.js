@@ -1,13 +1,18 @@
 import Apify from 'apify';
  
 const { name, profiles, domains } = await Apify.getInput();
- 
-const instagramCall = await Apify.call('instagram-scraper', { 
-   directUrls: [
-    "https://www.instagram.com/profile"
-  ],
-    "resultsType": "details",
-    "resultsLimit":1,
+
+const instagramCall = await Apify.call('jaroslavhejlek/instagram-scraper', { 
+ ...input,
+     resultsType: "details",
+       directUrls, 
+   //[ "https://www.instagram.com/profile"], //make sure ni input not na
+ "resultsType": "details",
+ "resultsLimit":1,
+     proxy: {
+         "useApifyProxy": true,
+         "apifyProxyGroups": ["RESIDENTIAL"]
+     },
 });
  
 const { datasetId } = instagramCall;
