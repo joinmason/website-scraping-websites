@@ -11,7 +11,10 @@ const isValidUrl = urlString=> {
      return !!urlPattern.test(urlString);
 }
 
-
+const isValidLinkTree = urlString=>{
+   var urlPattern = new RegExp('');
+   return !!urlPattern.test(urlString);
+}
 //const { name, profiles, domains } = await Apify.getInput();
 
 const input = await Apify.getInput();
@@ -31,7 +34,7 @@ for(item in profiles){
 console.log(insta_valid);*/
 
 
-const instagramCall = await Apify.call('jaroslavhejlek/instagram-scraper', { 
+const instagramCall = await Apify.metamorph('jaroslavhejlek/instagram-scraper', { 
  ...input,
      resultsType: "details",
        directUrls, 
