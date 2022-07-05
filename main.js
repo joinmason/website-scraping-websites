@@ -1,6 +1,35 @@
 import Apify from 'apify';
  
-const { name, profiles, domains } = await Apify.getInput();
+
+const isValidUrl = urlString=> {
+      var urlPattern = new RegExp('^(https?:\\/\\/)?'+ // validate protocol
+       '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // validate domain name
+       '((\\d{1,3}\\.){3}\\d{1,3}))'+ // validate OR ip (v4) address
+       '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // validate port and path
+       '(\\?[;&a-z\\d%_.~+=-]*)?'+ // validate query string
+       '(\\#[-a-z\\d_]*)?$','i'); // validate fragment locator
+     return !!urlPattern.test(urlString);
+}
+
+
+//const { name, profiles, domains } = await Apify.getInput();
+
+const input = await Apify.getInput();
+const name = input.name;
+const profiles = input.profiles;
+const domains = input.domains;
+const directUrls = profiles;
+//profiles scrape
+//name scraope
+const insta_valid = [];
+//https://stackoverflow.com/questions/18399997/url-validation-in-javascript-instagram-validation
+/*insta_re = "/^\s*(http\:\/\/)?instagram\.com\/[a-z\d-_]{1,255}\s*$/i"
+for(item in profiles){
+   if !(item.test(insta_re)){insta_valid.push(item);}  
+}
+//first print invalud
+console.log(insta_valid);*/
+
 
 const instagramCall = await Apify.call('jaroslavhejlek/instagram-scraper', { 
  ...input,
@@ -14,7 +43,18 @@ const instagramCall = await Apify.call('jaroslavhejlek/instagram-scraper', {
          "apifyProxyGroups": ["RESIDENTIAL"]
      },
 });
- 
+/*
+if isValidUrl
+
+add url misses here in hashmap
+ Object.keys(dict).map(function(k){
+    return dict[k];
+}).join(',');
+
+"
+(?:https.+?linktr\.ee(?:%2F|.+?)):?\s?([a-zA-Z0-9_.-]+)
+//https://regex101.com/library/V0QtXe?amp%3Bsearch=card&orderBy=LEAST_POINTS&page=348
+*/
 const { datasetId } = instagramCall;
  
 // get Instagram dataset items
@@ -31,7 +71,7 @@ for (const item of items) {
 }
  
 if (linkTreesToCheck.length) {
-   // this is a web-scraper task that will only receive the URLS
+   // this is a web-scraper task that will only receive the URLS/need another task actor for just the links, and then for the other actor just have the liks
    const linkTreeRun = await Apify.callTask('pay-with-cherry-domain', {
       startUrls: linkTreesToCheck.map(({ url, link }) => ({
           url: link,

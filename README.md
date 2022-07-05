@@ -1,4 +1,43 @@
+
+From notes
+
+Take Insta Validator, Linktree validator, and website validator to make the csv for return when done
+- Use columns: ID, Name, Instagram link, Website, (Added fields from apify: Linktree present (linktree will be added there), Instagram Pay Link Present (Will be null if not found on profile or the actual linktree), and Website Pay Link Present
+what to do if data is not checked, just say it is not present on the website for the remaining fill ins and explain as the report detail
+Test actor run
+
+
+
+
+How this scraper works:
+This scraper will take data from salesforce and update whether Merchant Instagram's have LinkTrees, pay links on those link trees, pay links on the instragrsm page, and if the pay link is present on the merchants website
+
+
+Inputs:
+Takes the Account ID
+Takes the Account Name
+Takes correct Instagram URLs (https://instagram/username and NOT @username or user name)
+Takes correctly filled out site URLs
+
+
+
+
+Possible outputs/how to interperate:
+
+
+If all three extra fields are filled out (Linktree present (url output), Instagram Pay Link Present, Website Pay Link Present) they are in compliance.
+If the Linktree is present but the pay link is not present that means it is not present on the linktree
+if the linktree is not present but the instagram pay link is present, that means pay.withcherry.com is in the bio and you may decide to have them change to linktree.
+If the website and instagram profile were not filled out properly by the merchant or intake rep, it will show it as not installed.
+If they do not have an instagram it will show up as not installed on instagram or linktree.
+If they do not have a website, it will show up as not installed on their website.
+
+
+
+
+
 Why we chose to do a manual package
+
 
 progress
 waiting git
