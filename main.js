@@ -27,7 +27,7 @@ Apify.main(async () => {
 //const { name, profiles, domains } = await Apify.getInput();
 
 const input = await Apify.getInput();
-console.log(input);
+console.log(input['profiles']);
 const name =  Array.from(new Set(input.name));
 const profiles =  Array.from(new Set(input.profiles));
 const domains = Array.from(new Set(input.domains));
