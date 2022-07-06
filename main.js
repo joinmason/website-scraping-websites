@@ -3,8 +3,6 @@ import Apify from 'apify';
 /* THIS SCRIPT ONLY WORKS WHEN EVERY PROVIDED LIST IS EQUAL LENGTH FOR INPUTS (KEEPS TRACK OF ID/MERCHANT) */
 // Ported from https://github.com/zpelechova/instagram-miniactors/blob/main/instagram-profile/main.js
 
-
-
 /* VALIDATORS AND CLEANERS */
 // Take any urls and check for misconfigs from sales/onboarding inputs
 function cleanInstagram(urlString) {
@@ -62,8 +60,9 @@ for (const url of profiles){
    //console.log(url);
    let instaURL = cleanInstagram(url);
    
-   if (instaURL != null && isInstagram(instaURL)){
+   if (instaURL != null && isInstagram(instaURL)) {
    domainUrls.push(instaURL);
+   console.log(instaURL);
   }
 }
 
