@@ -76,9 +76,9 @@ const instagramCall = await Apify.call('jaroslavhejlek/instagram-scraper', {
    proxy: {
       "useApifyProxy": true,
       "apifyProxyGroups": ["RESIDENTIAL"]
-   },
-   },
-   memoryMbytes: 2048
+   }
+},
+  {memoryMbytes: 2048}
 );
 
 const { datasetId } = instagramCall;
