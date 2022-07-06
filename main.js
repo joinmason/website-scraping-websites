@@ -1,14 +1,5 @@
 import Apify from 'apify';
 
-const isValidUrl = urlString=> {
-      var urlPattern = new RegExp('^(https?:\\/\\/)?'+ // validate protocol
-       '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // validate domain name
-       '((\\d{1,3}\\.){3}\\d{1,3}))'+ // validate OR ip (v4) address
-       '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // validate port and path
-       '(\\?[;&a-z\\d%_.~+=-]*)?'+ // validate query string
-       '(\\#[-a-z\\d_]*)?$','i'); // validate fragment locator
-     return !!urlPattern.test(urlString);
-}
 
 const isInstagram = urlString=> {
       var urlPattern = new RegExp('"/^\s*(http\:\/\/)?instagram\.com\/[a-z\d-_]{1,255}\s*$/i"'); // validate fragment locator
@@ -20,6 +11,16 @@ const isValidLinkTree = urlString=>{
    return !!urlPattern.test(urlString);
 }
 
+const isValidUrl = urlString=> {
+      var urlPattern = new RegExp('^(https?:\\/\\/)?'+ // validate protocol
+       '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // validate domain name
+       '((\\d{1,3}\\.){3}\\d{1,3}))'+ // validate OR ip (v4) address
+       '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // validate port and path
+       '(\\?[;&a-z\\d%_.~+=-]*)?'+ // validate query string
+       '(\\#[-a-z\\d_]*)?$','i'); // validate fragment locator
+     return !!urlPattern.test(urlString);
+}
+
 Apify.main(async () => {
 
 
@@ -27,9 +28,10 @@ Apify.main(async () => {
 
 const input = await Apify.getInput();
 console.log(input);
-const name = input.name;
-const profiles = input.profiles;
-const domains = input.domains;
+const name =  Array.from(new Set(input.name));
+const profiles =  Array.from(new Set(input.profiles));
+const domains = Array.from(new Set(input.domains));
+
 const directUrls = profiles;
 console.log(profiles);
 //profiles scrape
