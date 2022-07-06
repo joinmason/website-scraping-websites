@@ -1,73 +1,29 @@
 import Apify from 'apify';
 
+/* THIS SCRIPT ONLY WORKS WHEN EVERY PROVIDED LIST IS EQUAL LENGTH FOR INPUTS (KEEPS TRACK OF ID/MERCHANT) */
+// Ported from https://github.com/zpelechova/instagram-miniactors/blob/main/instagram-profile/main.js
+
+
 
 /* VALIDATORS AND CLEANERS */
 // Take any urls and check for misconfigs from sales/onboarding inputs
-const cleanInstagram = urlString=> {
+function cleanInstagram(urlString) {
    // https://stackoverflow.com/questions/1707299/how-to-extract-a-string-using-javascript-regex
    // https://regexr.com/5tbdb      (?<=instagram.com\/)[A-Za-z0-9_.]+
+   
+   //(?<=instagram.com\/)[A-Za-z0-9_.]+");
    // uses a regex string to parse out the username and adds it to a properly formatted url for apify
-   return  "https://www.instagram.com/"+("(?<=instagram.com\/)[A-Za-z0-9_.]+".match(urlString)[0] +"/";
+   var usernamePattern = new RegExp("(?<=[Ii][Nn][Ss][Tt][Aa][Gg][Rr][Aa][Mm].[Cc][Oo][Mm]\/)[A-Za-z0-9_.]+");
+   return  urlString.match(usernamePattern) != null ? "https://www.instagram.com/"+ urlString.match(usernamePattern)[0] +"/" :  urlString.match(usernamePattern);
 }
 
 // Verifies it is an actual instagram url without a request
-const isInstagram = urlString=> {
+function isInstagram(urlString){
    // https://stackoverflow.com/questions/18399997/url-validation-in-javascript-instagram-validation
    // uses regex to verify that it has no spaces and is in the proper format else will be disincluded from requests
-   var urlPattern = new RegExp('"/^\s*(http\:\/\/)?instagram\.com\/[a-z\d-_]{1,255}\s*$/i"'); // validate fragment locator
+   var urlPattern = new RegExp("(?:(?:http|https):\/\/)?(?:www\.)?(?:instagram\.com|instagr\.am)\/([A-Za-z0-9-_\.]+)"); // validate fragment locator
    return !!urlPattern.test(urlString);
 }
-
-  if (typeOf instaString === "string"){
-   RUN IN LOOP AND DO A RETURN
-   insta[a] = instaString;
-}
-
-let usernames;
-
-    if (input.username) {
-        usernames = input.username;  
-    } else if (input.usernames) {
-        usernames = input.usernames;
-    } else {
-        console.log("What are you trying to get? It seems you forgot to add any input.")
-    }
-    
-    usernames = Array.from(new Set(input.usernames))
-
-    // we should probably remove white spaces
-
-    let directUrls = [];
-    for (const u in usernames) {
-        if (usernames[u].toLowerCase().includes('instagram.com/')) {
-            directUrls.push(usernames[u])    
-        } else if (usernames[u] === '') {
-//get rid of empty lines
-        } else {
-            const directUrl = `https://www.instagram.com/${usernames[u].replace(" ","")}`;
-            directUrls.push(directUrl);
-        }
-    }
-bigString = ['https://www.instagram.com/hydreauxluxirie_medspa',
-'https://www.instagram.com/laboussolemedspawellness/',
-'https://www.instagram.com/laserloungemedspa/?hl=en',
-'https://www.instagram.com/lineagestudionyc',
-'https://www.instagram.com/beyond_thebeautychair',
-'https://www.instagram.com/electrolysiscenter/',
-'https://www.instagram.com/mymagnoliasmile',
-'https://www.instagram.com/luminouswaxandesthetics/',
-'https://www.instagram.com/incognitohtx',
-'http://instagram.com/geneleemd', 
-'http://www.instagram.com/theartofthearch',
-'Instagram.com/cosmiccontouring',
-'https://www.instagram.com/voyagemedspa/',
-'https://www.instagram.com/multicarewellness',
-'https://www.instagram.com/maxlifebody/',
-'https://www.instagram.com/rejuvenatememedicalspa',
-'https://www.instagram.com/newimagesculpt', 
-'http://http://instagram.com/premierplasticsurgery',
-'https://www.instagram.com/stlouisweightlosssecret',
-'https://www.instagram.com/facecandybyandi']
 
 // checks for valid linktree to pull requests
 const isValidLinkTree = urlString=>{
@@ -92,20 +48,26 @@ const isValidUrl = urlString=> {
 
 Apify.main(async () => {
 
-
-//const { name, profiles, domains } = await Apify.getInput();
-
 const input = await Apify.getInput();
-console.log(input['profiles']);
-const name =  Array.from(new Set(input.name));
-const profiles = Array.from(new Set(input.profile));
-const domains = Array.from(new Set(input.domain));
+//const accountId =  Array.from(new Set(input.accountId));
+const names =  Array.from(new Set(input.names));
+const profiles = Array.from(new Set(input.profiles));
+const domains = Array.from(new Set(input.domains));
 
-const directUrls = profiles;
-console.log(profiles);
-//profiles scrape
-//name scraope
-const insta_valid = [];
+
+// 
+
+let domainUrls = [];
+
+// replaces all invalidated instagrams with valid urls, also creates list of valid ones with proper usernames to be passed to apify
+for (const url of profiles){
+   //console.log(url);
+   let instaURL = cleanInstagram(url);
+   console.log(isInstagram(instaURL));
+   if (instaURL != null && isInstagram(instaURL)){
+   domainUrls.push(instaURL);
+  }
+}
 
 const instagramCall = await Apify.call('jaroslavhejlek/instagram-scraper', { 
    ...input,
@@ -151,8 +113,6 @@ if (linkTreesToCheck.length) {
        await Apify.pushData({ payInLinktree, url });
    }
 }
-
-(?<=instagram.com\/)[A-Za-z0-9_.]+
  
 if (domains.length) {
    // this is another task that will take the domains from input
