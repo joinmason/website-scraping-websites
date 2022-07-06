@@ -53,7 +53,7 @@ const profiles = Array.from(new Set(input.profiles));
 const domains = Array.from(new Set(input.domains));
 
 
-let domainUrls = [];
+let directUrls = [];
 
 // replaces all invalidated instagrams with valid urls, also creates list of valid ones with proper usernames to be passed to apify
 for (const url of profiles){
@@ -61,8 +61,8 @@ for (const url of profiles){
    let instaURL = cleanInstagram(url);
    
    if (instaURL != null && isInstagram(instaURL)) {
-   domainUrls.push(instaURL);
-   console.log(instaURL);
+   directUrls.push(instaURL);
+   //console.log(instaURL);
   }
 }
 
