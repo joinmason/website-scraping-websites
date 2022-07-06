@@ -65,7 +65,7 @@ for (const url of profiles){
    //console.log(instaURL);
   }
 }
-
+console.log(directUrls);
 // call the scraper for instagram on the list of accounts
 const instagramCall = await Apify.call('jaroslavhejlek/instagram-scraper', { 
    ...input,
