@@ -55,20 +55,19 @@ const profiles = Array.from(new Set(input.profiles));
 const domains = Array.from(new Set(input.domains));
 
 
-// 
-
 let domainUrls = [];
 
 // replaces all invalidated instagrams with valid urls, also creates list of valid ones with proper usernames to be passed to apify
 for (const url of profiles){
    //console.log(url);
    let instaURL = cleanInstagram(url);
-   console.log(isInstagram(instaURL));
+   
    if (instaURL != null && isInstagram(instaURL)){
    domainUrls.push(instaURL);
   }
 }
 
+// call the scraper for instagram on the list of accounts
 const instagramCall = await Apify.call('jaroslavhejlek/instagram-scraper', { 
    ...input,
    resultsType: "details",
