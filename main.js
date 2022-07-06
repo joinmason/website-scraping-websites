@@ -1,5 +1,4 @@
 import Apify from 'apify';
- 
 
 const isValidUrl = urlString=> {
       var urlPattern = new RegExp('^(https?:\\/\\/)?'+ // validate protocol
@@ -11,10 +10,19 @@ const isValidUrl = urlString=> {
      return !!urlPattern.test(urlString);
 }
 
+const isInstagram = urlString=> {
+      var urlPattern = new RegExp('"/^\s*(http\:\/\/)?instagram\.com\/[a-z\d-_]{1,255}\s*$/i"'); // validate fragment locator
+     return !!urlPattern.test(urlString);
+}
+
 const isValidLinkTree = urlString=>{
-   var urlPattern = new RegExp('');
+   var urlPattern = new RegExp('(?:https.+?linktr\.ee(?:%2F|.+?)):?\s?([a-zA-Z0-9_.-]+)');
    return !!urlPattern.test(urlString);
 }
+
+Apify.main(async () => {
+
+
 //const { name, profiles, domains } = await Apify.getInput();
 
 const input = await Apify.getInput();
@@ -23,6 +31,7 @@ const name = input.name;
 const profiles = input.profiles;
 const domains = input.domains;
 const directUrls = profiles;
+console.log(profiles);
 //profiles scrape
 //name scraope
 const insta_valid = [];
@@ -36,16 +45,15 @@ console.log(insta_valid);*/
 
 
 const instagramCall = await Apify.metamorph('jaroslavhejlek/instagram-scraper', { 
- ...input,
-     resultsType: "details",
-       directUrls, 
-   //[ "https://www.instagram.com/profile"], //make sure ni input not na
- "resultsType": "details",
- "resultsLimit":1,
-     proxy: {
-         "useApifyProxy": true,
-         "apifyProxyGroups": ["RESIDENTIAL"]
-     },
+   ...input,
+   resultsType: "details",
+   directUrls, 
+   "resultsType": "details",
+   "resultsLimit":1,
+   proxy: {
+      "useApifyProxy": true,
+      "apifyProxyGroups": ["RESIDENTIAL"]
+   },
 });
 /*
 if isValidUrl
@@ -107,3 +115,6 @@ if (domains.length) {
        await Apify.pushData({ payInWebsite, url });
    }
 }
+
+
+});
