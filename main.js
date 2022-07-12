@@ -67,7 +67,7 @@ for (const url of profiles){
 }
 console.log(directUrls);
 // call the scraper for instagram on the list of accounts
-const instagramCall = await Apify.metamorph('jaroslavhejlek/instagram-scraper', { 
+const instagramCall = await Apify.call('jaroslavhejlek/instagram-scraper', { 
    ...input,
    resultsType: "details",
    directUrls, 
