@@ -222,7 +222,7 @@ await paginateItems(igID, async (items) => {
 // }
 
 await persistState();
-
+// query file  state and then send the state as json stringify
 await Actor.exit();
 
 /*
@@ -249,7 +249,7 @@ console.log(insta_valid);
 // /(?:(?:http|https):\/\/)?(?:www\.)?(?:instagram\.com|instagr\.am)\/([A-Za-z0-9-_\.]+)/im
 
 
-*/
+
 
 ($('a[href*="pay.withcherry.com/"]').length > 0 ||
 ((widgetElement.includes("cherry") || pageContent.includes("<!-- CHERRY WIDGET BEGIN -->")) && pageContent.includes("payment plans")) ||
@@ -275,3 +275,4 @@ for (const item in data2){
 
 });
 
+*/
