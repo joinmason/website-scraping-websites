@@ -1,5 +1,14 @@
 import Apify from 'apify';
 
+// get the websites, instagrams, zapier salesforce -> data set in apify, schedule a couple hours later inside apify
+// clean urls, it wont be included in teh scrapes, marked as false in the final csv
+// id, website, instagram (can include in task)
+// scrape instagram  (call)
+// scrape linktrees from instagram (call task)
+// scrape websites (call task)
+
+
+
 /* THIS SCRIPT ONLY WORKS WHEN EVERY PROVIDED LIST IS EQUAL LENGTH FOR INPUTS (KEEPS TRACK OF ID/MERCHANT) */
 // Ported from https://github.com/zpelechova/instagram-miniactors/blob/main/instagram-profile/main.js
 
@@ -159,3 +168,28 @@ console.log(insta_valid);
 
 
 */
+
+($('a[href*="pay.withcherry.com/"]').length > 0 ||
+((widgetElement.includes("cherry") || pageContent.includes("<!-- CHERRY WIDGET BEGIN -->")) && pageContent.includes("payment plans")) ||
+(pageContent.includes("payment plans") && $('iframe').length > 0))
+
+
+$.getJSON('https://api.apify.com/v2/datasets/BceRv4WmB8VkiDP6J/items?clean=true&format=json', function(data) {
+var json = JSON.stringify(data);
+var data2 = JSON.parse(json);
+var websiteCheck = {};
+for (const item in data2){
+  var url = new URL(item['url']);
+  var host = url.hostname;
+  //  //https://stackoverflow.com/questions/1098040/checking-if-a-key-exists-in-a-javascript-object
+  if (host in websiteCheck){
+    if (websiteCheck[host] == false && item['payInWebsite'] == true){
+      websiteCheck[host] = true;
+    }
+  } else {
+    websiteCheck[host] = item['payInWebsite'];
+  }
+}
+
+});
+
