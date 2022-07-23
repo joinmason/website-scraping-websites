@@ -11,18 +11,18 @@ import { KeyValueStore } from 'crawlee';
 
 /* VALIDATORS AND CLEANERS */
 // Take any urls and check for misconfigs from sales/onboarding inputs
-function cleanInstagram(urlString) {
+function cleanInstagram(urlString: string) {
    // https://stackoverflow.com/questions/1707299/how-to-extract-a-string-using-javascript-regex
    // https://regexr.com/5tbdb      (?<=instagram.com\/)[A-Za-z0-9_.]+
    
    //(?<=instagram.com\/)[A-Za-z0-9_.]+");
    // uses a regex string to parse out the username and adds it to a properly formatted url for apify
    var usernamePattern = new RegExp("(?<=[Ii][Nn][Ss][Tt][Aa][Gg][Rr][Aa][Mm].[Cc][Oo][Mm]\/)[A-Za-z0-9_.]+");
-   return  urlString.match(usernamePattern) != null ? "https://www.instagram.com/"+ urlString.match(usernamePattern)[0] +"/" :  urlString.match(usernamePattern);
+   return  urlString.match(usernamePattern) != null ? "https://www.instagram.com/"+ urlString.match(usernamePattern)?.[0] +"/" :  urlString.match(usernamePattern);
 }
 
 // Verifies it is an actual instagram url without a request
-function isInstagram(urlString){
+function isInstagram(urlString: string){
    // https://stackoverflow.com/questions/18399997/url-validation-in-javascript-instagram-validation
    // uses regex to verify that it has no spaces and is in the proper format else will be disincluded from requests
    var urlPattern = new RegExp("(?:(?:http|https):\/\/)?(?:www\.)?(?:instagram\.com|instagr\.am)\/([A-Za-z0-9-_\.]+)"); // validate fragment locator
@@ -30,14 +30,14 @@ function isInstagram(urlString){
 }
 
 // checks for valid linktree to pull requests
-const isValidLinkTree = urlString=>{
+const isValidLinkTree = (urlString: string) =>{
    // https://regex101.com/library/V0QtXe?amp%3Bsearch=card&orderBy=LEAST_POINTS&page=348
    var urlPattern = new RegExp('(?:https.+?linktr\.ee(?:%2F|.+?)):?\s?([a-zA-Z0-9_.-]+)$/i');
    return !!urlPattern.test(urlString);
 }
 
 // checks if the url is valid without spaces to be requested
-const isValidUrl = urlString=> {
+const isValidUrl = (urlString: string) => {
    // https://validators.readthedocs.io/en/latest/_modules/validators/url.html
    
    // https://stackoverflow.com/questions/5717093/check-if-a-javascript-string-is-a-url
@@ -64,7 +64,7 @@ await Actor.init();
 
 const client = Actor.newClient();
 
-const buildState = (items) => {
+const buildState = (items: any[]) => {
    return items.reduce((o, i) => ({ 
       ...o, 
       [i.id]: {
@@ -76,12 +76,12 @@ const buildState = (items) => {
    }), {});
 }
 
-const { startItems } = await Actor.getInput();
+const { startItems } = await Actor.getInput() as any;
 
 const STATE = await Actor.getValue('STATE') || buildState(startItems);
 
-const findId = (prop, toSearch) => {
-   return startItems.find((item) => item[prop] == toSearch)?.id;
+const findId = (prop: string, toSearch: any) => {
+   return startItems.find((item: any) => item[prop] == toSearch)?.id;
 }
 
 /**
@@ -109,11 +109,11 @@ Actor.on('aborting', persistState);
  * @param {string} id
  * @param {(items: any[]) => Promise<void>} cb 
  */
-const paginateItems = async (id, cb) => {
+const paginateItems = async (id: string, cb: (items: any[]) => Promise<void>) => {
    let offset = 0;
 
    while (true) {
-      const { items } = client.dataset(defaultDatasetId).list({
+      const { items } = await client.dataset(id).listItems({
          limit: 1000,
          offset,
       });
@@ -130,25 +130,24 @@ const paginateItems = async (id, cb) => {
 
 let directUrls = [];
 
+const pluck = (prop: string) => startItems.map((item: any) => item[prop])
+
 // replaces all invalidated instagrams with valid urls, also creates list of valid ones with proper usernames to be passed to apify
 // pluck the profile from startItems
-for (const url of profiles){
+for (const url of pluck('profile')){
    //console.log(url);
    let instaURL = cleanInstagram(url);
    
-   if (instaURL != null && isInstagram(instaURL)) {
+//    if (instaURL != null && isInstagram(instaURL)) {
    directUrls.push(instaURL);
    //console.log(instaURL);
-  }
+  //}
 }
-console.log(directUrls);
+// console.log(directUrls);
 // call the scraper for instagram on the list of accounts
 const instagramCall = await Actor.call('jaroslavhejlek/instagram-scraper', { 
-   ...input,
-   resultsType: "details",
+   resultsType: "details", // posts, comments, details, users
    directUrls, 
-   "resultsType": "details",
-   "resultsLimit":1,
    proxy: {
       "useApifyProxy": true,
       "apifyProxyGroups": ["RESIDENTIAL"]
@@ -166,8 +165,7 @@ await paginateItems(igID, async (items) => {
      const { biography, username } = item;
      const profile = `https://www.instagram.com/${username}`;
 
-     // find the username or profile in the startItems array
-     // TODO: FIX ME
+    
      const currentObject = STATE[findId('profile', profile)];
 
      if (biography.includes('linktr.ee')) {
