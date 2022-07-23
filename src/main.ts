@@ -181,43 +181,48 @@ await paginateItems(igID, async (items) => {
    }
 });
  
-// if (linkTreesToCheck.length) {
-//    await persistState();
+if (linkTreesToCheck.length) {
+   await persistState();
 
-//    // this is a web-scraper task that will only receive the URLS/need another task actor for just the links, and then for the other actor just have the liks
-//    const linkTreeRun = await Actor.callTask('important_marker/pay-with-cherry-linktrees', {
-//       startUrls: linkTreesToCheck.map(({ url, link }) => ({
-//           url: link,
-//           userData: {
-//               url // this is the instagram profile, so we can link them after
-//           }
-//       }))
-//    });
-//    // the data is available in request.userData.url inside the page function
-//    const { items } = await client.dataset(linkTreeRun.defaultDatasetId).list();
-    
-//    for (const { payInLinktree, instagram, url } of items) {
-//        await Actor.pushData({ payInLinktree, url, instagram });
-//    }
-// }
+   // this is a web-scraper task that will only receive the URLS/need another task actor for just the links, and then for the other actor just have the liks
+   const linkTreeRun = await Actor.callTask('important_marker/pay-with-cherry-linktrees', {
+      startUrls: linkTreesToCheck.map(({ url, link }) => ({
+          url: link,
+          userData: {
+              url // this is the instagram profile, so we can link them after
+          }
+      }))
+   });
+
+   await paginateItems(linkTreeRun.defaultDatasetId, async (items) => {
+     for (const { instagram, payInLinktree } of items) {
+         const currentObject = STATE[findId('profile', instagram)];
+
+         currentObject.payInLinktree = payInLinktree;
+     }
+   })
+}
  
-// if (domains.length) {
-//    await persistState();
+ const domains = pluck('website');
 
-//    // this is another task that will take the domains from input
-//    const domainRun = await Actor.callTask('important_marker/pay-with-cherry-domain', {
-//       startUrls: domains.map((url) => ({
-//           url,
-//       })),   
-//    });
+if (domains.length) {
+   await persistState();
+
+   // this is another task that will take the domains from input
+   const domainRun = await Actor.callTask('important_marker/pay-with-cherry-domain', {
+      startUrls: domains.map((url) => ({
+          url,
+      })),   
+   });
     
-//    // the request.url will be available inside the page function
-//    const { items } = await client.dataset(domainRun.defaultDatasetId).list();
-    
-//    for (const { payInWebsite, url } of items) {
-//        await Actor.pushData({ payInWebsite, url });
-//    }
-// }
+   await paginateItems(linkTreeRun.defaultDatasetId, async (items) => {
+     for (const { url, payInWebsite } of items) {
+         const currentObject = STATE[findId('website', url)];
+
+         currentObject.payInLinktree = payInLinktree;
+     }
+   })
+}
 
 await persistState();
 // query file  state and then send the state as json stringify
