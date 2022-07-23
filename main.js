@@ -1,11 +1,8 @@
-import Apify from 'apify';
+import { Actor } from 'apify';
+import { KeyValueStore } from 'crawlee';
 
-// get the websites, instagrams, zapier salesforce -> data set in apify, schedule a couple hours later inside apify
-// clean urls, it wont be included in teh scrapes, marked as false in the final csv
-// id, website, instagram (can include in task)
-// scrape instagram  (call)
-// scrape linktrees from instagram (call task)
-// scrape websites (call task)
+
+
 
 
 
@@ -53,18 +50,88 @@ const isValidUrl = urlString=> {
      return !!urlPattern.test(urlString);
 }
 
-Apify.main(async () => {
 
-const input = await Apify.getInput();
-//const accountId =  Array.from(new Set(input.accountId));
-const names =  Array.from(new Set(input.names));
-const profiles = Array.from(new Set(input.profiles));
-const domains = Array.from(new Set(input.domains));
 
+
+
+// get the websites, instagrams, zapier salesforce -> data set in apify, schedule a couple hours later inside apify
+// clean urls, it wont be included in teh scrapes, marked as false in the final csv
+// id, website, instagram (can include in task)
+// scrape instagram  (call)
+// scrape linktrees from instagram (call task)
+// scrape websites (call task)
+await Actor.init();
+
+const client = Actor.newClient();
+
+const buildState = (items) => {
+   return items.reduce((o, i) => ({ 
+      ...o, 
+      [i.id]: {
+         ...i,
+         payInBio: false,
+         payInWebsite: false,
+         payInLinktree: false
+      }
+   }), {});
+}
+
+const { startItems } = await Actor.getInput();
+
+const STATE = await Actor.getValue('STATE') || buildState(startItems);
+
+const findId = (prop, toSearch) => {
+   return startItems.find((item) => item[prop] == toSearch)?.id;
+}
+
+/**
+ * {
+ *    id: {
+ *      id: any
+ *      profile?: string
+ *      website?: string
+ *      payInBio: boolean,
+ *      payInWebsite: boolean,
+ *      payInLinktree: boolean
+ *    }
+ *  
+ * }
+ * 
+ * */
+const persistState = async () => {
+   await Actor.setValue('STATE', STATE);
+}
+
+Actor.on('migrating', persistState);
+Actor.on('aborting', persistState);
+
+/**
+ * @param {string} id
+ * @param {(items: any[]) => Promise<void>} cb 
+ */
+const paginateItems = async (id, cb) => {
+   let offset = 0;
+
+   while (true) {
+      const { items } = client.dataset(defaultDatasetId).list({
+         limit: 1000,
+         offset,
+      });
+
+      if (!items.length) {
+         break;
+      }
+
+      offset += items.length;
+
+      await cb(items);
+   }
+}
 
 let directUrls = [];
 
 // replaces all invalidated instagrams with valid urls, also creates list of valid ones with proper usernames to be passed to apify
+// pluck the profile from startItems
 for (const url of profiles){
    //console.log(url);
    let instaURL = cleanInstagram(url);
@@ -76,7 +143,7 @@ for (const url of profiles){
 }
 console.log(directUrls);
 // call the scraper for instagram on the list of accounts
-const instagramCall = await Apify.call('jaroslavhejlek/instagram-scraper', { 
+const instagramCall = await Actor.call('jaroslavhejlek/instagram-scraper', { 
    ...input,
    resultsType: "details",
    directUrls, 
@@ -90,58 +157,73 @@ const instagramCall = await Apify.call('jaroslavhejlek/instagram-scraper', {
   //{memoryMbytes: 2048}
 );
 
-const { datasetId } = instagramCall;
- 
-// get Instagram dataset items
-const { items } = client.dataset(datase.tId).list();
+const { defaultDatasetId: igID } = instagramCall;
+
 const linkTreesToCheck = [];
- 
-for (const item of items) {
-  const { biography, url } = item;
-  if (biography.includes('linktr.ee')) {
-     linkTreesToCheck.push({ link: biography.match('linktr.ee'), url });
-  } else {
-     await Apify.pushData({ payInBio: biography.includes('/pay.withcherry.com/'), url });
-  }
-}
- 
-if (linkTreesToCheck.length) {
-   // this is a web-scraper task that will only receive the URLS/need another task actor for just the links, and then for the other actor just have the liks
-   const linkTreeRun = await Apify.callTask('pay-with-cherry-domain', {
-      startUrls: linkTreesToCheck.map(({ url, link }) => ({
-          url: link,
-          userData: {
-              url // this is the instagram profile, so we can link them after
-          }
-      }))
-   });
-   // the data is available in request.userData.url inside the page function
-   const { items } = await client.dataset(linkTreeRun.defaultDatasetId).list();
-    
-   for (const { payInLinktree, url } of items) {
-       await Apify.pushData({ payInLinktree, url });
-   }
-}
- 
-if (domains.length) {
-   // this is another task that will take the domains from input
-   const domainRun = await Apify.callTask('pay-with-cherry-domain', {
-      startUrls: domains.map((url) => ({
-          url,
-      })),   
-   });
-    
-   // the request.url will be available inside the page function
-   const { items } = await client.dataset(domainRun.defaultDatasetId).list();
-    
-   for (const { payInWebsite, url } of items) {
-       await Apify.pushData({ payInWebsite, url });
-   }
-}
 
+await paginateItems(igID, async (items) => {
+   for (const item of items) {
+     const { biography, username } = item;
+     const profile = `https://www.instagram.com/${username}`;
 
+     // find the username or profile in the startItems array
+     // TODO: FIX ME
+     const currentObject = STATE[findId('profile', profile)];
+
+     if (biography.includes('linktr.ee')) {
+        linkTreesToCheck.push({ 
+           link: biography.match(/(https?:\/\/linktr\.ee\/[^\s]+)/)?.[1], 
+           url: profile,
+        });
+        // theres externalUrl property thats the clean URL for the linktr.ee
+        currentObject.payInBio = false;
+     } else {
+        currentObject.payInBio = true;
+     }
+   }
 });
+ 
+// if (linkTreesToCheck.length) {
+//    await persistState();
 
+//    // this is a web-scraper task that will only receive the URLS/need another task actor for just the links, and then for the other actor just have the liks
+//    const linkTreeRun = await Actor.callTask('important_marker/pay-with-cherry-linktrees', {
+//       startUrls: linkTreesToCheck.map(({ url, link }) => ({
+//           url: link,
+//           userData: {
+//               url // this is the instagram profile, so we can link them after
+//           }
+//       }))
+//    });
+//    // the data is available in request.userData.url inside the page function
+//    const { items } = await client.dataset(linkTreeRun.defaultDatasetId).list();
+    
+//    for (const { payInLinktree, instagram, url } of items) {
+//        await Actor.pushData({ payInLinktree, url, instagram });
+//    }
+// }
+ 
+// if (domains.length) {
+//    await persistState();
+
+//    // this is another task that will take the domains from input
+//    const domainRun = await Actor.callTask('important_marker/pay-with-cherry-domain', {
+//       startUrls: domains.map((url) => ({
+//           url,
+//       })),   
+//    });
+    
+//    // the request.url will be available inside the page function
+//    const { items } = await client.dataset(domainRun.defaultDatasetId).list();
+    
+//    for (const { payInWebsite, url } of items) {
+//        await Actor.pushData({ payInWebsite, url });
+//    }
+// }
+
+await persistState();
+
+await Actor.exit();
 
 /*
 Scraps to be deleted later
@@ -174,7 +256,7 @@ console.log(insta_valid);
 (pageContent.includes("payment plans") && $('iframe').length > 0))
 
 
-$.getJSON('https://api.apify.com/v2/datasets/BceRv4WmB8VkiDP6J/items?clean=true&format=json', function(data) {
+$.getJSON('https://api.Actor.com/v2/datasets/BceRv4WmB8VkiDP6J/items?clean=true&format=json', function(data) {
 var json = JSON.stringify(data);
 var data2 = JSON.parse(json);
 var websiteCheck = {};

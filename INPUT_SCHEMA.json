@@ -4,27 +4,17 @@
     "type": "object",
     "schemaVersion": 1,
     "properties": {
-        "names": {
-            "title": "name",
+        "startItems": {
+            "title": "",
+            "description": "desc",
+            "default": [{
+                "id": 0,
+                "website": "https://cherrydemo.com",
+                "profile": "cherryus"
+            }],
             "type": "array",
-            "description": "Provide a profile URL of the account you want to scrape the posts from.",
-            "editor": "stringList",
-            "prefill": ["apifytech"]
+            "editor": "json"
         },
-        "profiles": {
-            "title": "profile",
-            "type": "array",
-            "description": "Provide a profile URL of the account you want to scrape the posts from.",
-            "editor": "stringList",
-            "prefill": ["cherryus"]
-        },
-        "domains": {
-            "title": "domain",
-            "type": "array",
-            "description": "Provide a profile URL of the account you want to scrape the posts from.",
-            "editor": "stringList",
-            "prefill": ["https://cherrydemo.com"]
-        }
     },
-    "required": ["names", "profiles", "domains"]
+    "required": ["startItems"]
 }
