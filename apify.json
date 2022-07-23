@@ -1,0 +1,7 @@
+{
+	"name": "with-cherry",
+	"version": "0.0",
+	"buildTag": "latest",
+	"env": null,
+	"template": "crawlee_cheerio_typescript"
+}
