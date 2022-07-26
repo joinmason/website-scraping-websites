@@ -3,9 +3,6 @@ import { KeyValueStore } from 'crawlee';
 
 
 
-
-
-
 /* THIS SCRIPT ONLY WORKS WHEN EVERY PROVIDED LIST IS EQUAL LENGTH FOR INPUTS (KEEPS TRACK OF ID/MERCHANT) */
 // Ported from https://github.com/zpelechova/instagram-miniactors/blob/main/instagram-profile/main.js
 
