@@ -140,7 +140,7 @@ for (const url of pluck('profile')){
    //console.log(instaURL);
   //}
 }
-/*// console.log(directUrls);
+// console.log(directUrls);
 // call the scraper for instagram on the list of accounts
 const instagramCall = await Actor.call('jaroslavhejlek/instagram-scraper', { 
    resultsType: "details", // posts, comments, details, users
@@ -198,7 +198,7 @@ if (linkTreesToCheck.length) {
          currentObject.payInLinktree = payInLinktree;
      }
    })
-}*/
+}
  
  const domains = pluck('website');
 
