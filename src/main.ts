@@ -170,7 +170,7 @@ await paginateItems(igID, async (items) => {
         continue;
      }
 
-     const profile = `https://www.instagram.com/${username}`;
+     const profile = `https://www.instagram.com/${username}/`;
     
      const currentObject = STATE[findId('profile', profile)];
 
