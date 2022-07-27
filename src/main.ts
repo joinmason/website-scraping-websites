@@ -140,7 +140,7 @@ const pluck = (prop: string) => startItems.map((item: any) => item[prop])
 
 // replaces all invalidated instagrams with valid urls, also creates list of valid ones with proper usernames to be passed to apify
 // pluck the profile from startItems
-for (const url of pluck('profile')){
+for (const { id, profile } of startItems){
    //console.log(url);
    let instaURL = cleanInstagram(url);
    
@@ -150,6 +150,8 @@ for (const url of pluck('profile')){
    } else {
       await Actor.pushData({ 
          error: `Profile not found/URL formatting invalid`,
+         profile,
+         id,
       });
    }
 }
@@ -177,7 +179,7 @@ await paginateItems(igID, async (items) => {
      if (!biography || !username) {
         await Actor.pushData({ 
           error: !biography ? 'Missing bio' : 'Missing username',
-        });
+        },);
         continue;
      }
 
