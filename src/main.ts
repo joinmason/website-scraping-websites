@@ -142,10 +142,14 @@ for (const url of pluck('profile')){
    //console.log(url);
    let instaURL = cleanInstagram(url);
    
-//    if (instaURL != null && isInstagram(instaURL)) {
-   directUrls.push(instaURL);
+   if (instaURL != null && isInstagram(instaURL)) {
+      directUrls.push(instaURL);
    //console.log(instaURL);
-  //}
+   } else {
+      await Actor.pushData({ 
+         error: `${profile} not found/URL formatting invalid`,
+      });
+   }
 }
 // console.log(directUrls);
 // call the scraper for instagram on the list of accounts
@@ -183,6 +187,7 @@ await paginateItems(igID, async (items) => {
      if (!currentObject) {
       await Actor.pushData({ 
          error: `${profile} not found/URL formatting invalid`,
+         id
       });
       continue;
      }
@@ -260,6 +265,7 @@ for (const { id, website } of startItems) {
       }
 
       domains.push({ url: fixedUrl, id });
+
    } catch (e) {
       await Actor.pushData({
          website,
@@ -292,7 +298,6 @@ if (domains.length) {
             });
             continue;
          }
-         
          currentObject.url = url;
          currentObject.payInWebsite = payInWebsite;
      }
