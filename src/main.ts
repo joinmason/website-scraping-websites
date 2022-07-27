@@ -77,6 +77,7 @@ const buildState = (items: any[]) => {
 const { startItems } = await Actor.getInput() as any;
 
 const STATE = await Actor.getValue('STATE') || buildState(startItems);
+const CALLS = await Actor.getValue('CALLS') || {};
 
 const findId = (prop: string, toSearch: any) => {
    return startItems.find((item: any) => item[prop] == toSearch)?.id;
@@ -98,6 +99,7 @@ const findId = (prop: string, toSearch: any) => {
  * */
 const persistState = async () => {
    await Actor.setValue('STATE', STATE);
+   await Actor.setValue('CALLS', CALLS);
 }
 
 Actor.on('migrating', persistState);
@@ -109,6 +111,8 @@ Actor.on('aborting', persistState);
  */
 const paginateItems = async (id: string, cb: (items: any[]) => Promise<void>) => {
    let offset = 0;
+
+   await new Promise((r) => setTimeout(r, 10000));
 
    while (true) {
       const { items } = await client.dataset(id).listItems({
@@ -136,8 +140,6 @@ const paginateItems = async (id: string, cb: (items: any[]) => Promise<void>) =>
 
 let directUrls = [];
 
-const pluck = (prop: string) => startItems.map((item: any) => item[prop])
-
 // replaces all invalidated instagrams with valid urls, also creates list of valid ones with proper usernames to be passed to apify
 // pluck the profile from startItems
 for (const { id, profile } of startItems){
@@ -155,6 +157,17 @@ for (const { id, profile } of startItems){
       });
    }
 }
+
+const createCall = async (name, cb) => {
+   const { runId } = CALLS[name] ?? await cb();
+
+   if (CALLS[name] === null) {
+      CALLS[name] = { runId };
+   }
+
+   return client.run(runId).waitForFinish();
+}
+
 // console.log(directUrls);
 // call the scraper for instagram on the list of accounts
 const instagramCall = await Actor.call('jaroslavhejlek/instagram-scraper', { 
@@ -179,7 +192,7 @@ await paginateItems(igID, async (items) => {
      if (!biography || !username) {
         await Actor.pushData({ 
           error: !biography ? 'Missing bio/Contact Apify Support Scraper is Broken' : 'Missing username/Contact Apify Support Scraper is Broken',
-        },);
+        });
         continue;
      }
 
