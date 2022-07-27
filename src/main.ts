@@ -14,7 +14,9 @@ function cleanInstagram(urlString: string) {
    //(?<=instagram.com\/)[A-Za-z0-9_.]+");
    // uses a regex string to parse out the username and adds it to a properly formatted url for apify
    var usernamePattern = new RegExp("(?<=[Ii][Nn][Ss][Tt][Aa][Gg][Rr][Aa][Mm].[Cc][Oo][Mm]\/)[A-Za-z0-9_.]+");
-   return  urlString.match(usernamePattern) != null ? "https://www.instagram.com/"+ urlString.match(usernamePattern)?.[0] +"/" :  urlString.match(usernamePattern);
+   return  urlString.match(usernamePattern) != null 
+      ? "https://www.instagram.com/"+ urlString.match(usernamePattern)?.[0] +"/" 
+      :  urlString.match(usernamePattern)?.[0];
 }
 
 // Verifies it is an actual instagram url without a request
@@ -147,7 +149,7 @@ for (const url of pluck('profile')){
    //console.log(instaURL);
    } else {
       await Actor.pushData({ 
-         error: `${profile} not found/URL formatting invalid`,
+         error: `Profile not found/URL formatting invalid`,
       });
    }
 }
