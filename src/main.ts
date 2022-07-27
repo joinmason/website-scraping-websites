@@ -1,6 +1,7 @@
 import { Actor } from 'apify';
 import { KeyValueStore } from 'crawlee';
 
+const { log } = Actor.utils;
 
 
 /* THIS SCRIPT ONLY WORKS WHEN EVERY PROVIDED LIST IS EQUAL LENGTH FOR INPUTS (KEEPS TRACK OF ID/MERCHANT) */
@@ -66,6 +67,7 @@ const buildState = (items: any[]) => {
       ...o, 
       [i.id]: {
          ...i,
+         errors: [],
          payInBio: false,
          payInWebsite: false,
          payInLinktree: false
@@ -160,10 +162,24 @@ const linkTreesToCheck = [];
 await paginateItems(igID, async (items) => {
    for (const item of items) {
      const { biography, username } = item;
-     const profile = `https://www.instagram.com/${username}`;
+     
+     if (!biography || !username) {
+        await Actor.pushData({ 
+          error: !biography ? 'Missing bio' : 'Missing username',
+        });
+        continue;
+     }
 
+     const profile = `https://www.instagram.com/${username}`;
     
      const currentObject = STATE[findId('profile', profile)];
+
+     if (!currentObject) {
+      await Actor.pushData({ 
+         error: `${profile} not found/URL formatting invalid`,
+      });
+      continue;
+     }
 
      if (biography.includes('linktr.ee')) {
         linkTreesToCheck.push({ 
@@ -275,4 +291,10 @@ for (const item in data2){
 
 });
 
+
+
+
+TypeError: Cannot read properties of undefined (reading 'includes') 
+finding the error and selecting it 
+zapier setgup
 */
