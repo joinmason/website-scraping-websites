@@ -315,7 +315,7 @@ await persistState();
 // do for cleanup
 await Actor.callTask('important_marker/zapier-sync', {
    ...Actor.getEnv(),
-}, { waitForFinish: 0 });
+});
 
 
 // query file  state and then send the state as json stringify
