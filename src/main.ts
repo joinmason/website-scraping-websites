@@ -114,7 +114,7 @@ const paginateItems = async (id: string, cb: (items: any[]) => Promise<void>) =>
       const { items } = await client.dataset(id).listItems({
          limit: 1000,
          offset,
-         clean: true,
+         clean: false,
       });
 
       if (!items.length) {
@@ -178,7 +178,7 @@ await paginateItems(igID, async (items) => {
      
      if (!biography || !username) {
         await Actor.pushData({ 
-          error: !biography ? 'Missing bio' : 'Missing username',
+          error: !biography ? 'Missing bio/Contact Apify Support Scraper is Broken' : 'Missing username/Contact Apify Support Scraper is Broken',
         },);
         continue;
      }
@@ -309,7 +309,15 @@ if (domains.length) {
 }
 
 
+
 await persistState();
+
+// do for cleanup
+await Actor.callTask('important_marker/zapier-sync', {
+   ...Actor.getEnv(),
+}, { waitSecs: 0 });
+
+
 // query file  state and then send the state as json stringify
 await Actor.exit();
 
