@@ -1,8 +1,6 @@
 import { Actor } from 'apify';
 import { KeyValueStore } from 'crawlee';
-
-const { log } = Actor.utils;
-
+import { parse } from 'url';
 
 /* THIS SCRIPT ONLY WORKS WHEN EVERY PROVIDED LIST IS EQUAL LENGTH FOR INPUTS (KEEPS TRACK OF ID/MERCHANT) */
 // Ported from https://github.com/zpelechova/instagram-miniactors/blob/main/instagram-profile/main.js
@@ -67,7 +65,6 @@ const buildState = (items: any[]) => {
       ...o, 
       [i.id]: {
          ...i,
-         errors: [],
          payInBio: false,
          payInWebsite: false,
          payInLinktree: false
@@ -115,6 +112,7 @@ const paginateItems = async (id: string, cb: (items: any[]) => Promise<void>) =>
       const { items } = await client.dataset(id).listItems({
          limit: 1000,
          offset,
+         clean: true,
       });
 
       if (!items.length) {
@@ -123,7 +121,14 @@ const paginateItems = async (id: string, cb: (items: any[]) => Promise<void>) =>
 
       offset += items.length;
 
-      await cb(items);
+      try {
+         await cb(items);
+      } catch (e) {
+         await Actor.pushData({
+            error: e.message,
+            items,
+         });
+      }
    }
 }
 
@@ -171,8 +176,9 @@ await paginateItems(igID, async (items) => {
      }
 
      const profile = `https://www.instagram.com/${username}/`;
-    
-     const currentObject = STATE[findId('profile', profile)];
+   
+     const id = findId('profile', profile);
+     const currentObject = STATE[id];
 
      if (!currentObject) {
       await Actor.pushData({ 
@@ -185,6 +191,7 @@ await paginateItems(igID, async (items) => {
         linkTreesToCheck.push({ 
            link: biography.match(/(https?:\/\/linktr\.ee\/[^\s]+)/)?.[1], 
            url: profile,
+           id,
         });
         // theres externalUrl property thats the clean URL for the linktr.ee
         currentObject.payInBio = false;
@@ -199,43 +206,99 @@ if (linkTreesToCheck.length) {
 
    // this is a web-scraper task that will only receive the URLS/need another task actor for just the links, and then for the other actor just have the liks
    const linkTreeRun = await Actor.callTask('important_marker/pay-with-cherry-linktrees', {
-      startUrls: linkTreesToCheck.map(({ url, link }) => ({
+      startUrls: linkTreesToCheck.map(({ url, id, link }) => {
+
+         return {
           url: link,
           userData: {
-              url // this is the instagram profile, so we can link them after
+            url, // this is the instagram profile, so we can link them after
+            id,
           }
-      }))
+        }
+      })
    });
 
    await paginateItems(linkTreeRun.defaultDatasetId, async (items) => {
-     for (const { instagram, payInLinktree } of items) {
-         const currentObject = STATE[findId('profile', instagram)];
+     for (const { id, payInLinktree } of items) {
+         const currentObject = STATE[id];
+
+         if (!currentObject) {
+            await Actor.pushData({
+               error: `payInLinktree ${id} not found`,
+               id,
+            });
+            continue;
+         }
 
          currentObject.payInLinktree = payInLinktree;
      }
    })
 }
  
- const domains = pluck('website');
+await persistState();
+const domains = [];
+
+for (const { id, website } of startItems) {
+   try {
+      const parsedUrl = parse(website);
+
+      if (!parsedUrl || !parsedUrl.href) {
+         throw new Error('Invalid url');
+      }
+      
+      let fixedUrl = parsedUrl.href;
+
+      if (!parsedUrl.protocol) {
+         fixedUrl = `http://${fixedUrl}`;
+      }
+
+      try {
+         new URL(fixedUrl);
+      } catch (e) {
+         console.log((e as Error).message);
+         continue;
+      }
+
+      domains.push({ url: fixedUrl, id });
+   } catch (e) {
+      await Actor.pushData({
+         website,
+         error: e.message,
+         id,
+      });
+   }
+}
 
 if (domains.length) {
-   await persistState();
-
    // this is another task that will take the domains from input
    const domainRun = await Actor.callTask('important_marker/pay-with-cherry-domain', {
-      startUrls: domains.map((url) => ({
+      startUrls: domains.map(({ url, id }) => ({
           url,
+          userData: {
+            id,
+          }
       })),   
    });
     
    await paginateItems(domainRun.defaultDatasetId, async (items) => {
-     for (const { url, payInWebsite } of items) {
-         const currentObject = STATE[findId('website', url)];
+     for (const { url, id, payInWebsite } of items) {
+         const currentObject = STATE[id];
 
+         if (!currentObject) {
+            await Actor.pushData({
+               error: `Website not found ${url}`,
+               id,
+               website: url,
+            });
+            continue;
+         }
+         
+         currentObject.url = url;
          currentObject.payInWebsite = payInWebsite;
      }
-   })
+   });
 }
+
 
 await persistState();
 // query file  state and then send the state as json stringify
