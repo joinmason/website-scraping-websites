@@ -142,7 +142,7 @@ const pluck = (prop: string) => startItems.map((item: any) => item[prop])
 // pluck the profile from startItems
 for (const { id, profile } of startItems){
    //console.log(url);
-   let instaURL = cleanInstagram(url);
+   let instaURL = cleanInstagram(profile);
    
    if (instaURL != null && isInstagram(instaURL)) {
       directUrls.push(instaURL);
@@ -315,7 +315,7 @@ await persistState();
 // do for cleanup
 await Actor.callTask('important_marker/zapier-sync', {
    ...Actor.getEnv(),
-}, { waitSecs: 0 });
+}, { waitForFinish: 0 });
 
 
 // query file  state and then send the state as json stringify
