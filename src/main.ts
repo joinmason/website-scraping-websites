@@ -344,7 +344,7 @@ if (linkTreesToCheck.length) {
    await persistState();
 
    // this is a web-scraper task that will only receive the URLS/need another task actor for just the links, and then for the other actor just have the liks
-   const linkTreeRun = await persistedCall('important_marker/pay-with-cherry-linktrees', {
+   const linkTreeRun = await persistedCall('immaculate_scraper/pay-with-cherry-linktrees', {
       startUrls: linkTreesToCheck.map(({ url, id, link }) => {
          return {
             url: link,
@@ -410,7 +410,7 @@ for (const { id, website } of startItems) {
 
 if (domains.length) {
    // this is another task that will take the domains from input
-   const domainRun = await persistedCall('important_marker/pay-with-cherry-domain', {
+   const domainRun = await persistedCall('immaculate_scraper/pay-with-cherry-domain', {
       startUrls: domains.map(({ url, id }) => ({
           url,
           userData: {
@@ -441,7 +441,7 @@ if (domains.length) {
 await persistState();
 
 // do for cleanup
-await Actor.callTask('important_marker/zapier-sync', {
+await Actor.callTask('immaculate_scraper/zapier-sync', {
    ...Actor.getEnv(),
 });
 
