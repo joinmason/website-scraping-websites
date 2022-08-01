@@ -1,6 +1,8 @@
 import { Actor } from 'apify';
 import { KeyValueStore } from 'crawlee';
 import { parse } from 'url';
+import { createHash } from 'crypto';
+import { sleep } from '@crawlee/utils';
 
 /* THIS SCRIPT ONLY WORKS WHEN EVERY PROVIDED LIST IS EQUAL LENGTH FOR INPUTS (KEEPS TRACK OF ID/MERCHANT) */
 // Ported from https://github.com/zpelechova/instagram-miniactors/blob/main/instagram-profile/main.js
@@ -77,7 +79,6 @@ const buildState = (items: any[]) => {
 const { startItems } = await Actor.getInput() as any;
 
 const STATE = await Actor.getValue('STATE') || buildState(startItems);
-const CALLS = await Actor.getValue('CALLS') || {};
 
 const findId = (prop: string, toSearch: any) => {
    return startItems.find((item: any) => item[prop] == toSearch)?.id;
@@ -99,7 +100,6 @@ const findId = (prop: string, toSearch: any) => {
  * */
 const persistState = async () => {
    await Actor.setValue('STATE', STATE);
-   await Actor.setValue('CALLS', CALLS);
 }
 
 Actor.on('migrating', persistState);
@@ -112,7 +112,7 @@ Actor.on('aborting', persistState);
 const paginateItems = async (id: string, cb: (items: any[]) => Promise<void>) => {
    let offset = 0;
 
-   await new Promise((r) => setTimeout(r, 10000));
+   await sleep(10000);
 
    while (true) {
       const { items } = await client.dataset(id).listItems({
@@ -158,34 +158,140 @@ for (const { id, profile } of startItems){
    }
 }
 
-const createCall = async (name, cb) => {
-   const { runId } = CALLS[name] ?? await cb();
+/**
+ * @param {ReturnType<typeof Apify.newClient>} client
+ * @param {string} runId
+ */
+export const waitForFinish = async (client, runId) => {
+    const run = client.run(runId);
 
-   if (CALLS[name] === null) {
-      CALLS[name] = { runId };
-   }
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+        try {
+            const { status } = await run.get();
 
-   return client.run(runId).waitForFinish();
-}
+            if (status !== 'RUNNING' && status !== 'READY') {
+                break;
+            }
+
+            await sleep(1000);
+        } catch (e) {
+            console.log(e.message);
+
+            break;
+        }
+    }
+};
+
+/**
+ * forceCloud allows to test on the platform
+ *
+ * @param {Apify.ActorRun} run
+ * @returns {() => Promise<Record<string, any>>}
+ */
+export const getRemoteInput = (run) => () => Actor.openKeyValueStore(run.defaultKeyValueStoreId, { forceCloud: true }).then((s) => s.getValue('INPUT'));
+
+/**
+ * @param {Apify.ActorRun} run
+ */
+export const output = (run) => {
+    return {
+        run,
+        input: getRemoteInput(run),
+    };
+};
+
+/**
+ * Make Apify.call idempotent.
+ * Wraps the key value store of your choice and keeps the call
+ * states there. Same inputs always yield the same call.
+ *
+ * Provide the idempotencyKey manually to be able to create
+ * more calls using the same input, since it defaults to the
+ * current Run ID
+ *
+ * @param {string} actorName Default name
+ */
+export const persistedCall = async (actorName = '', input = {}, isTask = false, idempotencyKey: any = Actor.getEnv().actorRunId, options: any = { }) => {
+    const kv = await Actor.openKeyValueStore();
+
+    const calls = new Map<string, any>((await kv.getValue('CALLS')) ?? []);
+
+    // don't try to write all at once for all events
+    let persisting = false;
+
+    const persistStateInternal = async () => {
+        if (!persisting) {
+            persisting = true;
+            await kv.setValue('CALLS', [...calls.entries()]);
+            persisting = false;
+        }
+    };
+
+    Actor.on('persistState', persistStateInternal);
+    Actor.on('migrating', persistStateInternal);
+    Actor.on('aborting', persistStateInternal);
+
+    const inputHash = createHash('md5', { autoDestroy: true })
+        .update(`${actorName}${JSON.stringify({ input, options })}${idempotencyKey}`)
+        .digest('hex');
+
+    const call = calls.get(inputHash);
+
+    if (call?.id) {
+        console.log('Call exists, waiting', call);
+
+        await waitForFinish(
+            client,
+            call.id,
+        );
+
+        console.log('Sleeping for 20s for dataset', call);
+
+        await sleep(20000); // wait for dataset to settle (omg)
+
+        console.log('Slept', call);
+
+        return output(call);
+    }
+
+    const run = await client[isTask ? 'task' : 'actor'](actorName).call(input, { ...options, waitSecs: 1 });
+
+    calls.set(inputHash, run);
+
+    await persistStateInternal();
+
+    console.log('Called and waiting', run);
+
+    await waitForFinish(
+        client,
+        run.id,
+    );
+
+    console.log('Sleeping for 20s for dataset', call);
+
+    await sleep(20000); // wait for dataset to settle (omg)
+
+    console.log('Slept', call);
+
+    return output(run);
+};
+
 
 // console.log(directUrls);
 // call the scraper for instagram on the list of accounts
-const instagramCall = await Actor.call('jaroslavhejlek/instagram-scraper', { 
+const instagram = await persistedCall('jaroslavhejlek/instagram-scraper', { 
    resultsType: "details", // posts, comments, details, users
    directUrls, 
    proxy: {
       "useApifyProxy": true,
       "apifyProxyGroups": ["RESIDENTIAL"]
    }
-},
-  //{memoryMbytes: 2048}
-);
-
-const { defaultDatasetId: igID } = instagramCall;
+});
 
 const linkTreesToCheck = [];
 
-await paginateItems(igID, async (items) => {
+await paginateItems(instagram.run.defaultDatasetId, async (items) => {
    for (const item of items) {
      const { biography, username } = item;
      
@@ -202,24 +308,35 @@ await paginateItems(igID, async (items) => {
      const currentObject = STATE[id];
 
      if (!currentObject) {
-      await Actor.pushData({ 
-         error: `${profile} not found/URL formatting invalid`,
-         id
-      });
-      continue;
-     }
-
-     if (biography.includes('linktr.ee')) {
-        linkTreesToCheck.push({ 
-           link: biography.match(/(https?:\/\/linktr\.ee\/[^\s]+)/)?.[1], 
-           url: profile,
-           id,
+        await Actor.pushData({ 
+            error: `${profile} not found/URL formatting invalid`,
+            id
         });
-        // theres externalUrl property thats the clean URL for the linktr.ee
-        currentObject.payInBio = false;
-     } else {
-        currentObject.payInBio = true;
+        continue;
      }
+     
+    const sites = [
+        /(https?:\/\/msha\.ke\/[^\s]+)/,
+        /(https?:\/\/linktr\.ee\/[^\s]+)/,
+    ];
+
+    let matched = false;
+
+    for (const site of sites) {
+        const matches = biography.match(site);
+
+        if (matches?.[1]) {
+            linkTreesToCheck.push({ 
+                link: matches[1], 
+                url: profile,
+                id,
+            });
+
+            matched = true;
+        }
+    }
+    
+    currentObject.payInBio = currentObject.payInBio || matched;
    }
 });
  
@@ -227,20 +344,19 @@ if (linkTreesToCheck.length) {
    await persistState();
 
    // this is a web-scraper task that will only receive the URLS/need another task actor for just the links, and then for the other actor just have the liks
-   const linkTreeRun = await Actor.callTask('important_marker/pay-with-cherry-linktrees', {
+   const linkTreeRun = await persistedCall('important_marker/pay-with-cherry-linktrees', {
       startUrls: linkTreesToCheck.map(({ url, id, link }) => {
-
          return {
-          url: link,
-          userData: {
-            url, // this is the instagram profile, so we can link them after
-            id,
-          }
+            url: link,
+            userData: {
+                url, // this is the instagram profile, so we can link them after
+                id,
+            }
         }
       })
-   });
+   }, true);
 
-   await paginateItems(linkTreeRun.defaultDatasetId, async (items) => {
+   await paginateItems(linkTreeRun.run.defaultDatasetId, async (items) => {
      for (const { id, payInLinktree } of items) {
          const currentObject = STATE[id];
 
@@ -254,7 +370,7 @@ if (linkTreesToCheck.length) {
 
          currentObject.payInLinktree = payInLinktree;
      }
-   })
+   });
 }
  
 await persistState();
@@ -294,16 +410,16 @@ for (const { id, website } of startItems) {
 
 if (domains.length) {
    // this is another task that will take the domains from input
-   const domainRun = await Actor.callTask('important_marker/pay-with-cherry-domain', {
+   const domainRun = await persistedCall('important_marker/pay-with-cherry-domain', {
       startUrls: domains.map(({ url, id }) => ({
           url,
           userData: {
             id,
           }
-      })),   
-   });
+      })),
+   }, true);
     
-   await paginateItems(domainRun.defaultDatasetId, async (items) => {
+   await paginateItems(domainRun.run.defaultDatasetId, async (items) => {
      for (const { url, id, payInWebsite } of items) {
          const currentObject = STATE[id];
 
@@ -315,13 +431,12 @@ if (domains.length) {
             });
             continue;
          }
+
          currentObject.url = url;
          currentObject.payInWebsite = payInWebsite;
      }
    });
 }
-
-
 
 await persistState();
 
