@@ -318,6 +318,7 @@ await paginateItems(instagram.run.defaultDatasetId, async (items) => {
     const sites = [
         /(https?:\/\/msha\.ke\/[^\s]+)/,
         /(https?:\/\/linktr\.ee\/[^\s]+)/,
+        /(https?:\/\/instabio\.cc\/[^\s]+)/,
     ];
 
     let matched = false;
