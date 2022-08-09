@@ -287,7 +287,7 @@ const instagram = await persistedCall('jaroslavhejlek/instagram-scraper', {
       "useApifyProxy": true,
       "apifyProxyGroups": ["RESIDENTIAL"]
    },
-},  {build: 'beta'});
+},  {"build": 'beta'});
 
 const linkTreesToCheck = [];
 
