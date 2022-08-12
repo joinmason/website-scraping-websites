@@ -1,28 +1,27 @@
 
 From notes
 
-Take Insta Validator, Linktree validator, and website validator to make the csv for return when done
-- Use columns: ID, Name, Instagram link, Website, (Added fields from apify: Linktree present (linktree will be added there), Instagram Pay Link Present (Will be null if not found on profile or the actual linktree), and Website Pay Link Present
+
 what to do if data is not checked, just say it is not present on the website for the remaining fill ins and explain as the report detail
 Test actor run
-
-
+https://console.apify.com/organization/5SDPsAprw8Nd4xyeT/actors/shu8hvrXbJbY3Eb9W
 
 
 How this scraper works:
 This scraper will take data from salesforce and update whether Merchant Instagram's have LinkTrees, pay links on those link trees, pay links on the instragrsm page, and if the pay link is present on the merchants website
 
 
-Inputs:
+Inputs directly into the scraper:
 Takes the Account ID
 Takes the Account Name
 Takes correct Instagram URLs (https://instagram/username and NOT @username or user name)
 Takes correctly filled out site URLs
 
 
-
-
 Possible outputs/how to interperate:
+
+Take Insta Validator, Linktree validator, and website validator to make the csv for return when done
+- Use columns: ID, Name, Instagram link, Website, (Added fields from apify: Linktree present (linktree will be added there), Instagram Pay Link Present (Will be null if not found on profile or the actual linktree), and Website Pay Link Present
 
 
 If all three extra fields are filled out (Linktree present (url output), Instagram Pay Link Present, Website Pay Link Present) they are in compliance.
@@ -32,6 +31,22 @@ If the website and instagram profile were not filled out properly by the merchan
 If they do not have an instagram it will show up as not installed on instagram or linktree.
 If they do not have a website, it will show up as not installed on their website.
 
+How it reads websites:
+It looks for any pay.withcherry.com link first, then looks for the text "payment plans" with an html embed of the widget's id="all" plus the pay.withcherry.com link, then it looks for the text "payment plans" with an iframe without cherry mentioned at all as a last resort.
+
+How deep does it go?
+It visits and checks every link present on the first URL's page you provide. It will not look further than that as most marketing checks require it to be on just one other tab and not super hidden, else we need to reach out and get that fixed for the merchant. This is known as depth of 1.
+
+How it reads instagrams:
+It grabs the instagram user link and tries to test to see if the profile exists, if there is not a url present that is proper such as a username with spaces or @username, it will return false and not run the linktree check. Then it looks for any link in the bio that is pay.withcherry.com or a linktree, milkshake (or whatever you wish to add to the list in the scraper my-actor-1 around line 318 const sites)
+
+How it reads linktrees/added link services:
+Grabs the link service and scrapes one page really fast looking for an href pay.withcherry.com present anywhere on the page.
+
+How this can be modified later:
+In the webscraper - you can check if text or verbage is present in html and return potentially the page it was on or how deep it was using apify docs.
+You can search for the text and add a salesforce field to see what text was present in the linktree for the href by grabbing it.
+The possibilities are endless for jquery.
 
 
 
