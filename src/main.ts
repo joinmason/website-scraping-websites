@@ -71,7 +71,7 @@ const buildState = (items: any[]) => {
          ...i,
          payInBio: false,
          payInWebsite: false,
-         payInLinktree: false
+         payInLinktree: false,
       }
    }), {});
 }
