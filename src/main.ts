@@ -308,7 +308,7 @@ await paginateItems(instagram.run.defaultDatasetId, async (items) => {
 
         await Actor.pushData({ 
            ...item,
-           error: !biography ? 'Missing bio/Contact Apify Support Scraper is Broken' : 'Missing username/Contact Apify Support Scraper is Broken',
+           error: !biography ? 'Missing username/Contact Apify Support Scraper is Broken' : 'Missing username/Contact Apify Support Scraper is Broken',
         });
         
         continue;
