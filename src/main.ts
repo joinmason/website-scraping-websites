@@ -517,5 +517,5 @@ for (const item in data2){
 
 TypeError: Cannot read properties of undefined (reading 'includes') 
 finding the error and selecting it 
-zapier setgup
+zapier setup
 */
