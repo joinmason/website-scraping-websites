@@ -81,7 +81,7 @@ const { startItems } = await Actor.getInput() as any;
 const STATE = await Actor.getValue('STATE') || buildState(startItems);
 
 const findId = (prop: string, toSearch: any) => {
-   return startItems.find((item: any) => item[prop] == toSearch)?.id;
+   return startItems.find((item: any) => item[prop].includes(toSearch));
 }
 
 /**
@@ -110,39 +110,37 @@ Actor.on('aborting', persistState);
  * @param {(items: any[]) => Promise<void>} cb 
  */
 const paginateItems = async (id: string, cb: (items: any[]) => Promise<void>) => {
-   let offset = 0;
+    let offset = 0;
+    const dataset = client.dataset(id);
 
-   await sleep(10000);
+    await sleep(10000);
 
-   while (true) {
-      const { items } = await client.dataset(id).listItems({
-         limit: 1000,
-         offset,
-         clean: false,
-      });
+    while (true) {
+        const { items } = await dataset.listItems({
+            limit: 1000,
+            offset,
+            clean: false,
+        });
 
-      if (!items.length) {
-         break;
-      }
+        if (!items.length) {
+            break;
+        }
 
-      offset += items.length;
+        offset += items.length;
 
-      try {
-         await cb(items);
-      } catch (e) {
-         await Actor.pushData({
-            error: e.message,
-            items,
-         });
-      }
-   }
+        try {
+            await cb(items);
+        } catch (e) {
+            console.log(e);
+        }
+    }
 }
 
 let directUrls = [];
 
 // replaces all invalidated instagrams with valid urls, also creates list of valid ones with proper usernames to be passed to apify
 // pluck the profile from startItems
-for (const { id, profile } of startItems){
+for (const { id, profile, website } of startItems){
    //console.log(url);
    let instaURL = cleanInstagram(profile);
    
@@ -154,6 +152,7 @@ for (const { id, profile } of startItems){
          error: `Profile not found/URL formatting invalid`,
          profile,
          id,
+         website,
       });
    }
 }
@@ -212,7 +211,7 @@ export const output = (run) => {
  *
  * @param {string} actorName Default name
  */
-export const persistedCall = async (actorName = '', input = {}, isTask = false, idempotencyKey: any = Actor.getEnv().actorRunId, options: any = { }) => {
+export const persistedCall = async (actorName = '', input = {}, options: any = {}) => {
     const kv = await Actor.openKeyValueStore();
 
     const calls = new Map<string, any>((await kv.getValue('CALLS')) ?? []);
@@ -233,7 +232,7 @@ export const persistedCall = async (actorName = '', input = {}, isTask = false, 
     Actor.on('aborting', persistStateInternal);
 
     const inputHash = createHash('md5', { autoDestroy: true })
-        .update(`${actorName}${JSON.stringify({ input, options })}${idempotencyKey}`)
+        .update(`${actorName}${JSON.stringify({ input, options })}`)
         .digest('hex');
 
     const call = calls.get(inputHash);
@@ -255,7 +254,7 @@ export const persistedCall = async (actorName = '', input = {}, isTask = false, 
         return output(call);
     }
 
-    const run = await client[isTask ? 'task' : 'actor'](actorName).call(input, { ...options, waitSecs: 1 });
+    const run = await client.task(actorName).start(input, options);
 
     calls.set(inputHash, run);
 
@@ -278,16 +277,10 @@ export const persistedCall = async (actorName = '', input = {}, isTask = false, 
 };
 
 
-// console.log(directUrls);
 // call the scraper for instagram on the list of accounts
-const instagram = await persistedCall('jaroslavhejlek/instagram-scraper', { 
-   resultsType: "details", // posts, comments, details, users
-   directUrls, 
-   proxy: {
-      "useApifyProxy": true,
-      "apifyProxyGroups": ["RESIDENTIAL"]
-   },
-}, false, Actor.getEnv().actorRunId, {'build': 'beta'}); // actorName = '', input = {}, isTask = false, idempotencyKey: any = Actor.getEnv().actorRunId, options: any = { }
+const instagram = await persistedCall('immaculate_scraper/instagram-scraper-task', { 
+   directUrls,
+}); 
 
 const linkTreesToCheck = [];
 
@@ -296,15 +289,34 @@ await paginateItems(instagram.run.defaultDatasetId, async (items) => {
      const { biography, username } = item;
      
      if (!biography || !username) {
+        if (item["#error"]) {
+            const matches = item["#url"].match(/instagram\.com\/([^/]+)/);
+
+            if (matches?.[1]) {
+                const item = findId('profile', matches[1]);
+                
+                const currentObject = STATE?.[item.id];
+
+                await Actor.pushData({ 
+                    ...item,
+                    error: !biography ? 'Missing username/Contact Apify Support Scraper is Broken' : 'Missing username/Contact Apify Support Scraper is Broken',
+                });
+
+                continue;
+            }
+        }
+
         await Actor.pushData({ 
-          error: !biography ? 'Missing bio/Contact Apify Support Scraper is Broken' : 'Missing username/Contact Apify Support Scraper is Broken',
+           ...item,
+           error: !biography ? 'Missing bio/Contact Apify Support Scraper is Broken' : 'Missing username/Contact Apify Support Scraper is Broken',
         });
+        
         continue;
      }
 
      const profile = `https://www.instagram.com/${username}/`;
    
-     const id = findId('profile', profile);
+     const { id } = findId('profile', username);
      const currentObject = STATE[id];
 
      if (!currentObject) {
@@ -355,7 +367,7 @@ if (linkTreesToCheck.length) {
             }
         }
       })
-   }, true);
+   });
 
    await paginateItems(linkTreeRun.run.defaultDatasetId, async (items) => {
      for (const { id, payInLinktree } of items) {
@@ -418,7 +430,7 @@ if (domains.length) {
             id,
           }
       })),
-   }, true);
+   });
     
    await paginateItems(domainRun.run.defaultDatasetId, async (items) => {
      for (const { url, id, payInWebsite } of items) {
