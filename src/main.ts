@@ -286,9 +286,9 @@ const linkTreesToCheck = [];
 
 await paginateItems(instagram.run.defaultDatasetId, async (items) => {
    for (const item of items) {
-     const { biography, username } = item;
+     const { externalUrl, username } = item;
      
-     if (!biography || !username) {
+     if (!externalUrl || !username) {
         if (item["#error"]) {
             const matches = item["#url"].match(/instagram\.com\/([^/]+)/);
 
@@ -299,7 +299,7 @@ await paginateItems(instagram.run.defaultDatasetId, async (items) => {
 
                 await Actor.pushData({ 
                     ...item,
-                    error: !biography ? 'Missing username/Contact Apify Support Scraper is Broken' : 'Missing username/Contact Apify Support Scraper is Broken',
+                    error: !externalUrl ? 'Missing username/Contact Apify Support Scraper is Broken' : 'Missing username/Contact Apify Support Scraper is Broken',
                 });
 
                 continue;
@@ -308,7 +308,7 @@ await paginateItems(instagram.run.defaultDatasetId, async (items) => {
 
         await Actor.pushData({ 
            ...item,
-           error: !biography ? 'Missing username/Contact Apify Support Scraper is Broken' : 'Missing username/Contact Apify Support Scraper is Broken',
+           error: !externalUrl ? 'Missing username/Contact Apify Support Scraper is Broken' : 'Missing username/Contact Apify Support Scraper is Broken',
         });
         
         continue;
@@ -336,7 +336,7 @@ await paginateItems(instagram.run.defaultDatasetId, async (items) => {
     let matched = false;
 
     for (const site of sites) {
-        const matches = biography.match(site);
+        const matches = externalUrl.match(site);
 
         if (matches?.[1]) {
             linkTreesToCheck.push({ 
